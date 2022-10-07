@@ -33,35 +33,36 @@
 //     return(0);
 // }
 
+struct echo_request
+    {
+        char type; // Type
+        char code; // Code
+        short checksum; // Checksum
+        short id; // Identification
+        short seq; // Sequence
+        int time; // Time
+        char data[16]; // Data
+    };
+
 int main(int ac, char **av){
     int error;
     int error1;
     struct addrinfo *res;
-    struct in_addr *inaddr;
-    char buf[32];
-    printf("len %d\n",INET_ADDRSTRLEN);
+    char buf[INET_ADDRSTRLEN];
+    int sockfd;
     error = getaddrinfo(av[1], NULL, NULL, &res);
-    // if (inet_pton(AF_INET, av[1], &inaddr) == 1){
-    //     if (inet_ntop(AF_INET, &inaddr, buf, sizeof(buf)) != NULL)
-    //     printf("inet addr: %s\n", buf);
-    // }
-    // else {
-    //     printf("inet_ntop error %d \n", error);
-    //     exit(1);
-    // }
     if (error != 0){
         printf("getaddrinfo error %d \n", error);
         exit(1);
     }
     else {
-        printf("ai_flags %d \n", res->ai_flags);
-        printf("ai_family %d \n", res->ai_family);
-        printf("ai_socktype %d \n", res->ai_socktype);
-        printf("ai_protocol %d \n", res->ai_protocol);
-        printf("ai_canonname %x \n", res->ai_canonname);
         if (inet_ntop(res->ai_family, &((struct sockaddr_in *) res->ai_addr)->sin_addr, buf, sizeof(buf)) != NULL)
         printf("inet addr: %s\n", buf);
-        // printf(" %d \n");
+    }
+    sockfd = socket(AF_INET, SOCK_RAW, IPPROTO_ICMP);
+    if (sockfd < 1)
+    {
+        printf("socket failed\n");
     }
     return(0);
 }
