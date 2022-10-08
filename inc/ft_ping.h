@@ -14,4 +14,10 @@
 
 #include <arpa/inet.h>
 
+typedef struct  s_ping{
+    int         ticks;
+    int         ttl;
+    int         timeout;
+}               t_ping;
+
 #endif
