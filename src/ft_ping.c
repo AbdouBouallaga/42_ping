@@ -32,7 +32,7 @@
 //     }
 //     return(0);
 // }
-t_ping *ping;
+t_ping ping;
 
 struct echo_request
     {
@@ -46,34 +46,33 @@ struct echo_request
     };
 
 void init_ping(){
-    ping->ticks = 0;
-    ping->ttl = 128;
-    ping->timeout = 10;
-
+    ping.ticks = 0;
+    ping.ttl = 128;
+    ping.timeout = 10;
 }
 
 int main(int ac, char **av){
-    int error;
-    int error1;
-    struct addrinfo *res;
-    char buf[INET_ADDRSTRLEN];
     int sockfd;
+
+    char buff[INET_ADDRSTRLEN];
+    ping.ipStr = buff;
     init_ping();
-    // icmphdr icmp;
-    error = getaddrinfo(av[1], NULL, NULL, &res);
-    if (error != 0){
-        printf("getaddrinfo error %d \n", error);
+
+    if (getaddrinfo(av[1], NULL, NULL, &ping.aInfo) != 0){
+        printf("getaddrinfo error \n");
         exit(1);
     }
     else {
-        if (inet_ntop(res->ai_family, &((struct sockaddr_in *) res->ai_addr)->sin_addr, buf, sizeof(buf)) != NULL)
-        printf("inet addr: %s\n", buf);
+        if (inet_ntop(ping.aInfo.ai_family, &((struct sockaddr_in *) ping.aInfo.ai_addr)->sin_addr, ping.ipStr, sizeof(buff)) != NULL)
+        printf("inet addr: %s\n", ping.ipStr);
     }
     sockfd = socket(AF_INET, SOCK_RAW, IPPROTO_ICMP);
     if (sockfd < 1)
     {
         printf("socket failed\n");
     }
-    setsockopt(sockfd, IPPROTO_IP, IP_TTL, 
+    if (setsockopt(sockfd, IPPROTO_IP, IP_TTL, &ping.ttl, sizeof(ping.ttl)) != 0){
+        printf("setsockopt error");
+    }
     return(0);
 }
