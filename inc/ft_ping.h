@@ -1,6 +1,8 @@
 #ifndef PING_HEADER
 #define PING_HEADER
 
+#include "../libft/libft.h"
+
 #include <sys/socket.h>
 
 #include <stdio.h>
@@ -14,13 +16,46 @@
 
 #include <arpa/inet.h>
 
+#define PING_PKT_S 64
 
-typedef struct  s_ping{
-    struct addrinfo aInfo;
-    char         *ipStr;
-    int         ticks;
-    int         ttl;
-    int         timeout;
-}               t_ping;
+//icmp header from ip_icmp.h
+struct icmphdr
+{
+  u_int8_t type;                /* message type */
+  u_int8_t code;                /* type sub-code */
+  u_int16_t checksum;
+  union
+  {
+    struct
+    {
+      u_int16_t        id;
+      u_int16_t        sequence;
+    } echo;                        /* echo datagram */
+    u_int32_t        gateway;        /* gateway address */
+    struct
+    {
+      u_int16_t        unused;
+      u_int16_t        mtu;
+    } frag;                        /* path mtu discovery */
+  } un;
+};
+#define ICMP_ECHO                8        /* Echo Request     */
+
+
+struct ping_pkt {
+    struct icmphdr hdr;
+    char msg[PING_PKT_S-sizeof(struct icmphdr)];
+};
+
+
+typedef struct          s_ping{
+    struct addrinfo     aInfoStruct;
+    struct addrinfo     *aInfo;
+    struct ping_pkt     pkt;
+    char                *ipStr;
+    int                 count;
+    int                 ttl;
+    int                 rcvTimeo;
+}                       t_ping;
 
 #endif
