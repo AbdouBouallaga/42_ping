@@ -1,4 +1,7 @@
 #include "../inc/ft_ping.h"
+#include <errno.h>
+extern int errno ;
+
 //getaddrinfo()
 // struct addrinfo {
 //                int              ai_flags;
@@ -26,8 +29,7 @@
 //     while(count){
 //         if (a){
 //             a = 0;
-//             signal(SIGALRM, time);
-//             alarm(1);
+//              
 //         }
 //     }
 //     return(0);
@@ -60,35 +62,39 @@ unsigned short checksum(void *b, int len)
     result = ~sum;
     return result;
 }
-//
+// 
 
 void init_ping(){
-    ping.count = 0;
-    ping.ttl = 128;
+    ping.sent_count = 0;
+    ping.rcev_count = 0;
+    ping.ttl = 64;
     ping.rcvTimeo = 10;
-    ping.aInfo = &ping.aInfoStruct;
+    ping.addrInfo = &ping.addrInfoStruct;
 
 }
 
 int main(int ac, char **av){
     int sockfd;
-    int i = 0;
-    int PingPong = 1;
+    int pingPong = 1;
+    int i;
+    int argn;
 
     char buff[INET_ADDRSTRLEN];
     ping.ipStr = buff;
+    struct sockaddr from;
+    socklen_t *addrlen;
+
     
     init_ping();
-
+    argn = 1;
     // get server info, including the ip address
-    if (getaddrinfo(av[1], NULL, NULL, &ping.aInfo) != 0){
+    if (getaddrinfo(av[1], NULL, NULL, &ping.addrInfo) != 0){
         printf("getaddrinfo error \n");
         exit(1);
     }
     else {
         // extract and print the ip address;
-        if (inet_ntop(ping.aInfo->ai_family, &((struct sockaddr_in *) ping.aInfo->ai_addr)->sin_addr, ping.ipStr, sizeof(buff)) != NULL)
-        printf("inet addr: %s\n", ping.ipStr);
+        inet_ntop(ping.addrInfo->ai_family, &((struct sockaddr_in *) ping.addrInfo->ai_addr)->sin_addr, ping.ipStr, sizeof(buff));
     }
     // open a raw socker with icmp prot
     sockfd = socket(AF_INET, SOCK_RAW, IPPROTO_ICMP);
@@ -104,26 +110,52 @@ int main(int ac, char **av){
     if (setsockopt(sockfd, IPPROTO_IP, SO_RCVTIMEO, &ping.rcvTimeo, sizeof(ping.rcvTimeo)) != 0){
         printf("setsockopt RCVTIMEO failed");
     }
+    printf("PING %s (%s) %d(%d) bytes of data.\n", av[argn], ping.ipStr, sizeof(ping.s_pkt.msg), sizeof(ping.s_pkt));
     // ping loop
-    while (PingPong){
+    while (pingPong){
         // clean icmp packet
-        ft_bzero(&ping.pkt, sizeof(ping.pkt));
+        ft_bzero(&ping.s_pkt, sizeof(ping.s_pkt));
+        ft_bzero(&ping.r_pkt, sizeof(ping.r_pkt));
         // fillup icmp packet
         // set packet type to ICMP_ECHO
-        ping.pkt.hdr.type = ICMP_ECHO;
+        ping.s_pkt.hdr.type = ICMP_ECHO;
         // set id to pid of process
-        ping.pkt.hdr.un.echo.id = getpid();
+        ping.s_pkt.hdr.un.echo.id = getpid();
         // fill msg (random)
         i = -1;
-        while(++i < sizeof(ping.pkt.msg)){
-            ping.pkt.msg[i] = 'A'+(i%16);
+        while(++i < sizeof(ping.s_pkt.msg)){
+            ping.s_pkt.msg[i] = 'A'+(i%16);
         }
-        ping.pkt.msg[i] = '\0';
+        ping.s_pkt.msg[i] = '\0';
         // calculate checksum
-        ping.pkt.hdr.checksum = checksum(&ping.pkt, sizeof(ping.pkt));
+        ping.s_pkt.hdr.checksum = checksum(&ping.s_pkt, sizeof(ping.s_pkt));
         // send the packet
-        // if (sendto(sockfd, &ping.pkt, sizeof(ping.pkt, 0, )) == -1)
-        pingPong = 0;
+        // send = 0;
+        // send = sendto(sockfd, &ping.s_pkt, sizeof(ping.s_pkt), 0, ping.addrInfo->ai_addr, sizeof(*ping.addrInfo->ai_addr));
+        int snt = sendto(sockfd, &ping.s_pkt, sizeof(ping.s_pkt), 0, ping.addrInfo->ai_addr, sizeof(*ping.addrInfo->ai_addr));
+        // printf("snt value ========= %d\n", snt);
+        if (snt == -1){
+            printf("sendto error\n");
+            printf("Value of errno: %d\n", errno);
+            perror("sendto");
+        }
+        // printf("Value of snt: %d\n", errno);
+        // perror("sendto");
+        ping.sent_count++;
+        printf("s_pkt type = %d ",ping.s_pkt.hdr.type);
+        printf("s_pkt code = %d // ",ping.s_pkt.hdr.code);
+        int rcv = recvfrom(sockfd, &ping.r_pkt, sizeof(ping.r_pkt), 0, 0, 0);
+        // printf("rcv value ========= %d\n", rcv);
+        if (rcv == -1){
+            printf("recvfrom error\n");
+        }
+        // printf("Value of rcv: %d\n", errno);
+        // perror("recvfrom");
+        // }
+        printf("s_pkt type = %d ",ping.r_pkt.hdr.type);
+        printf("s_pkt code = %d\n",ping.r_pkt.hdr.code);
+
+
     }
 
 

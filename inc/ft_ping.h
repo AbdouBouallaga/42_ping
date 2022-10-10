@@ -49,11 +49,14 @@ struct ping_pkt {
 
 
 typedef struct          s_ping{
-    struct addrinfo     aInfoStruct;
-    struct addrinfo     *aInfo;
-    struct ping_pkt     pkt;
+    struct addrinfo     addrInfoStruct;
+    // struct addrinfo     *aInfo;
+    struct addrinfo     *addrInfo;
+    struct ping_pkt     s_pkt;
+    struct ping_pkt     r_pkt;
     char                *ipStr;
-    int                 count;
+    int                 sent_count;
+    int                 rcev_count;
     int                 ttl;
     int                 rcvTimeo;
 }                       t_ping;
