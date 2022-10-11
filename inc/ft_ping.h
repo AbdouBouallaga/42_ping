@@ -16,9 +16,19 @@
 
 #include <arpa/inet.h>
 
+#include <sys/time.h>
+
 #define PING_PKT_S 64
 
-//icmp header from ip_icmp.h
+
+
+//from ip_icmp.h
+
+#define ICMP_ECHOREPLY		0	/* Echo Reply			*/
+#define ICMP_DEST_UNREACH	3	/* Destination Unreachable	*/
+#define ICMP_ECHO                8        /* Echo Request     */
+#define ICMP_TIME_EXCEEDED	11	/* Time Exceeded		*/
+
 struct icmphdr
 {
   u_int8_t type;                /* message type */
@@ -39,26 +49,34 @@ struct icmphdr
     } frag;                        /* path mtu discovery */
   } un;
 };
-#define ICMP_ECHO                8        /* Echo Request     */
 
+/////////////////////////////////////////////////////////
 
 struct ping_pkt {
     struct icmphdr hdr;
     char msg[PING_PKT_S-sizeof(struct icmphdr)];
 };
 
+// struct timeval {
+//    long  tv_sec;
+//    long  tv_usec;
+// };
 
 typedef struct          s_ping{
-    struct addrinfo     addrInfoStruct;
-    // struct addrinfo     *aInfo;
-    struct addrinfo     *addrInfo;
-    struct ping_pkt     s_pkt;
-    struct ping_pkt     r_pkt;
-    char                *ipStr;
+    int                 pong; // ping.pong comtroled by signal
+    int                 sockfd;
+    int                 verbose;
     int                 sent_count;
     int                 rcev_count;
     int                 ttl;
-    int                 rcvTimeo;
+    char                ipStr[INET_ADDRSTRLEN];
+    struct addrinfo     addrInfoStruct;
+    struct addrinfo     *addrInfo;
+    struct ping_pkt     s_pkt;
+    struct ping_pkt     r_pkt;
+    struct timeval      rcvTimeval;
+    struct timespec     time_sent;
+    struct timespec     time_recv;
 }                       t_ping;
 
 #endif
