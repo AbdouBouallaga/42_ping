@@ -2,38 +2,6 @@
 #include <errno.h>
 extern int errno ;
 
-//getaddrinfo()
-// struct addrinfo {
-//                int              ai_flags;
-//                int              ai_family;
-//                int              ai_socktype;
-//                int              ai_protocol;
-//                socklen_t        ai_addrlen;
-//                struct sockaddr *ai_addr;
-//                char            *ai_canonname;
-//                struct addrinfo *ai_next;
-//            };
-
-// void handler(int signum){
-//     printf("\ntimew = %d\n", timec);
-//     exit(1);
-// }
-// void time(int signum){
-//     timec++;
-//     a = 1;
-//     // exit(1);
-// }
-
-// int main(int ac, char **av){
-//     signal(SIGINT, handler);
-//     while(count){
-//         if (a){
-//             a = 0;
-//              
-//         }
-//     }
-//     return(0);
-// }
 t_ping ping;
 
 struct echo_request
@@ -47,9 +15,9 @@ struct echo_request
         char data[16]; // Data
     };
 
-// Calculating the Check Sum
-unsigned short checksum(void *b, int len)
-{    unsigned short *buf = b;
+
+unsigned short checksum(void *b, int len){ // Calculating icmp CheckSum
+    unsigned short *buf = b;
     unsigned int sum=0;
     unsigned short result;
  
@@ -64,27 +32,46 @@ unsigned short checksum(void *b, int len)
 }
 // 
 
-void init_ping(){
+void init_ping(){ // init ping struct
     ping.pong = 1;
+    ping.verbose = 0;
+    ping.count[0] = 0;
+    ping.count[1] = 0;
     ping.sent_count = 0;
     ping.rcev_count = 0;
     ping.ttl = 64;
+    ping.stats[0] = 100; // min
+    ping.stats[1] = 0; // max
+    ping.stats[2] = 0; // total
     ping.rcvTimeval.tv_sec = 30;  /* 30 Secs Timeout */
     ping.addrInfo = &ping.addrInfoStruct;
 }
 
-void    halt(){
+void    halt(){ // print stats and exit.
     printf("\n--- %s ping statistics ---\n",ping.ipStr);
-    printf("%d packets transmitted, %d packets received, %.2f%% packet loss\n",\
+    printf("%d packets transmitted, %d packets received, %f%% packet loss.\n",\
     ping.sent_count, ping.rcev_count, (double)(ping.sent_count - ping.rcev_count) / ping.sent_count * 100);
-    printf("round-trip min/avg/max/stddev = 1.515/2.050/2.926/0.408 ms\n");
+    if (ping.stats[0] < 100){
+        printf("round-trip min/avg/max = %.3f / %.3f / %.3f ms\n",\
+        ping.stats[0],\
+        ping.stats[2]/ping.rcev_count,\
+        ping.stats[1]\
+        );
+    }
     exit(1);
 }
 
+void    statsSave(double time){
+    if (ping.stats[0] > time) // min
+        ping.stats[0] = time;
+    if (ping.stats[1] < time) // max
+        ping.stats[1] = time;
+    ping.stats[2] += time; // total
+}
+
 void    pingPong(){
-    u_int16_t save_seq = ping.s_pkt.hdr.un.echo.sequence;
     int i;
-    // ping loop
+    u_int16_t save_seq = ping.s_pkt.hdr.un.echo.sequence; // save old seq
     // clean icmp packet
     ft_bzero(&ping.s_pkt, sizeof(ping.s_pkt));
     ping.s_pkt.hdr.un.echo.sequence = save_seq;
@@ -96,7 +83,7 @@ void    pingPong(){
     ping.s_pkt.hdr.un.echo.id = getpid();
     // fill msg (random)
     i = -1;
-    while(++i < sizeof(ping.s_pkt.msg)){
+    while(++i < (int)sizeof(ping.s_pkt.msg)){
         ping.s_pkt.msg[i] = 'A'+(i%16);
     }
     ping.s_pkt.msg[i] = '\0';
@@ -113,13 +100,15 @@ void    pingPong(){
     ping.s_pkt.hdr.un.echo.sequence++;
     int rcv = recvfrom(ping.sockfd, &ping.r_pkt, sizeof(ping.r_pkt), 0, 0, 0);
     clock_gettime(CLOCK_MONOTONIC, &ping.time_recv);
+    double time = (ping.time_recv.tv_nsec - ping.time_sent.tv_nsec)/1000000.0;
+    statsSave(time);
     if (rcv == -1){
         perror("recvfrom");
         ping.rcev_count--;
     }
     else if (ping.r_pkt.hdr.type == ICMP_ECHOREPLY || ping.r_pkt.hdr.code == 0){
             printf("%d bytes from %s: icmp_seq=%d ttl=%d time=%.3f ms\n",\
-            rcv, ping.ipStr, ping.s_pkt.hdr.un.echo.sequence, ping.ttl, (double)(ping.time_recv.tv_nsec - ping.time_sent.tv_nsec)/1000000.0);
+            rcv, ping.ipStr, ping.s_pkt.hdr.un.echo.sequence, ping.ttl, time);
     }
     else if (ping.r_pkt.hdr.type == ICMP_DEST_UNREACH){
         printf("Destination unreachable\n");
@@ -130,17 +119,31 @@ void    pingPong(){
     else {
         printf("Request timeout for icmp_seq %d\n", ping.s_pkt.hdr.un.echo.sequence);
     }
-    // printf("rcv code: %d, type: %d\n", ping.r_pkt.hdr.code, ping.r_pkt.hdr.type);
-    // printf("recieved data type = %d code = %d checksum = %d\n", ping.r_pkt.hdr.type, ping.r_pkt.hdr.code, ping.s_pkt.hdr.checksum);
-    // printf("%d bytes from %s: icmp_seq=%d ttl=64 time=1.246 ms\n", (int)sizeof(ping.r_pkt), ping.ipStr, ping.s_pkt.hdr.un.echo.sequence);
     ping.sent_count++;
     ping.rcev_count++;
     ping.pong = 1;
 }
 
+void    usage(char *execName){
+    printf("Usage:\n\t %s [options] <destination>\n", execName);
+    printf("Options:\n");
+    printf("\t-v                 verbose output\n");
+    printf("\t-t <ttl>           define time to live\n");
+    printf("\t-c <count>         stop after <count> replies\n");
+    exit(0);
+}
+
+int ft_itsdigit(char *str){
+    int i = -1;
+    while(str[++i]){
+        if (!ft_isdigit(str[i]))
+            return (0);
+    }
+    return (1);
+}
+
 int main(int ac, char **av){
     int i;
-    int hostAV;
 
     // printf("uid %d\n", getuid());
     // exit(1);
@@ -150,15 +153,38 @@ int main(int ac, char **av){
     }
     if(ac < 2)
 	{
-		printf("usage: %s [-Flags] <Hostname>\n", av[0]);
-		exit(0);
+		usage(av[0]);
 	}
-    i = 1;
-    while(av[i][0] == '-'){
-        
-    }
     init_ping();
-    // get server info, including the ip address
+    i = 1;
+    while(av[i][0] == '-' && i < ac){
+        printf("av[%d] = %s\n", i, av[i]);
+        if (av[i][1] == 'v'){
+            ping.verbose = 1;
+        }
+        else if (av[i][1] == 't' && ft_itsdigit(av[i+1])){
+            ping.ttl = ft_atoi(av[i+1]);
+            i++;
+        }
+        else if (av[i][1] == 'c' && ft_itsdigit(av[i+1])){
+            ping.count[0] = 1;
+            ping.count[1] = ft_atoi(av[i+1]);
+            i++;
+        }
+        else if (av[i][1] == 'h'){
+            usage(av[0]);
+        }
+        else{
+            printf("Invalid option: %s\n", av[i]);
+            usage(av[0]);
+        }
+        i++;
+        printf("i = %d\n", i);
+    }
+    if (av[i] == NULL){
+        usage(av[0]);
+    }
+    // get address info
     if (getaddrinfo(av[1], NULL, NULL, &ping.addrInfo) != 0){
         printf("getaddrinfo error \n");
         exit(1);
@@ -185,12 +211,19 @@ int main(int ac, char **av){
     // init the packet sequence number
     ping.s_pkt.hdr.un.echo.sequence = (u_int16_t)-1;
     signal(SIGINT, halt);
-    printf("PING %s (%s) %d(%d) bytes of data.\n", av[hostAV], ping.ipStr, (int)sizeof(ping.s_pkt.msg), (int)sizeof(ping.s_pkt));
+    printf("PING %s (%s) %d(%d) bytes of data.\n", av[i], ping.ipStr, (int)sizeof(ping.s_pkt.msg), (int)sizeof(ping.s_pkt));
+    
     while (1){
         if (ping.pong){
             signal(SIGALRM,pingPong);
             alarm(1);
             ping.pong = 0;
+            if (ping.count[1]){
+                if (ping.count[1] == 0){
+                    break;
+                }
+                ping.count[1]--;
+            }
         }
     }
     return(0);

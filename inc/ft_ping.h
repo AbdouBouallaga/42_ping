@@ -57,10 +57,16 @@ struct ping_pkt {
     char msg[PING_PKT_S-sizeof(struct icmphdr)];
 };
 
-// struct timeval {
-//    long  tv_sec;
-//    long  tv_usec;
-// };
+// struct addrinfo {
+//                int              ai_flags;
+//                int              ai_family;
+//                int              ai_socktype;
+//                int              ai_protocol;
+//                socklen_t        ai_addrlen;
+//                struct sockaddr *ai_addr;
+//                char            *ai_canonname;
+//                struct addrinfo *ai_next;
+//            };
 
 typedef struct          s_ping{
     int                 pong; // ping.pong comtroled by signal
@@ -69,14 +75,30 @@ typedef struct          s_ping{
     int                 sent_count;
     int                 rcev_count;
     int                 ttl;
+    int                 count[2]; // 0 there is a count flag, 1 is the count value 
     char                ipStr[INET_ADDRSTRLEN];
-    struct addrinfo     addrInfoStruct;
-    struct addrinfo     *addrInfo;
+    double              stats[3]; // 0 min, 1 max, 2 total to calculate avg
+    struct addrinfo     addrInfoStruct; // struct addrinfo {
+                                        //    int              ai_flags;
+                                        //    int              ai_family;
+                                        //    int              ai_socktype;
+                                        //    int              ai_protocol;
+                                        //    socklen_t        ai_addrlen; 
+                                        //    struct sockaddr *ai_addr;
+                                        //    char            *ai_canonname;
+                                        //    struct addrinfo *ai_next;
+                                        // };
+    struct addrinfo     *addrInfo; 
     struct ping_pkt     s_pkt;
     struct ping_pkt     r_pkt;
-    struct timeval      rcvTimeval;
+    struct timeval      rcvTimeval; // struct timeval {
+                                    //    long  tv_sec;
+                                    //    long  tv_usec;
+                                    // };
     struct timespec     time_sent;
     struct timespec     time_recv;
+    struct timespec     time_allStart;
+    struct timespec     time_allStop;
 }                       t_ping;
 
 #endif
