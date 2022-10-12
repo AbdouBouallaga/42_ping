@@ -68,6 +68,17 @@ struct ping_pkt {
 //                struct addrinfo *ai_next;
 //            };
 
+struct          time_s{
+  struct timeval      Timeval; // struct timeval {
+                                  //    time_t      tv_sec;     /* seconds */
+                                  //    suseconds_t tv_usec;    /* microseconds */
+                                  // };
+  struct timezone     Timezone; // struct timeval {
+                                    //    int tz_minuteswest;     /* minutes west of Greenwich */
+                                    //    int tz_dsttime;         /* type of DST correction */
+                                    // };
+};
+
 typedef struct          s_ping{
     int                 pong; // ping.pong comtroled by signal
     int                 sockfd;
@@ -91,9 +102,10 @@ typedef struct          s_ping{
     struct addrinfo     *addrInfo; 
     struct ping_pkt     s_pkt;
     struct ping_pkt     r_pkt;
+    struct time_s       timeC[2];
     struct timeval      rcvTimeval; // struct timeval {
-                                    //    long  tv_sec;
-                                    //    long  tv_usec;
+                                    //    time_t  tv_sec;
+                                    //    suseconds_t  tv_usec;
                                     // };
     struct timespec     time_sent;
     struct timespec     time_recv;

@@ -1,6 +1,8 @@
 #include "../inc/ft_ping.h"
+// BONUS /////////////////////////////////////////////
 #include <errno.h>
-extern int errno ;
+extern int errno;
+// BONUS /////////////////////////////////////////////
 
 t_ping ping;
 
@@ -90,25 +92,33 @@ void    pingPong(){
     // calculate checksum
     ping.s_pkt.hdr.checksum = checksum(&ping.s_pkt, sizeof(ping.s_pkt));
     // get send time
-    clock_gettime(CLOCK_MONOTONIC, &ping.time_sent);
+    gettimeofday(&ping.timeC[0].Timeval, NULL);
     // send the packet
     int snt = sendto(ping.sockfd, &ping.s_pkt, sizeof(ping.s_pkt), 0, ping.addrInfo->ai_addr, sizeof(*ping.addrInfo->ai_addr));
+    // perror("sendto");
     if (snt == -1){
         perror("sendto");
         ping.sent_count--;
     }
     ping.s_pkt.hdr.un.echo.sequence++;
     int rcv = recvfrom(ping.sockfd, &ping.r_pkt, sizeof(ping.r_pkt), 0, 0, 0);
-    clock_gettime(CLOCK_MONOTONIC, &ping.time_recv);
-    double time = (ping.time_recv.tv_nsec - ping.time_sent.tv_nsec)/1000000.0;
+    // perror("recvfrom");
+    gettimeofday(&ping.timeC[1].Timeval, NULL);
+    double time = (ping.timeC[1].Timeval.tv_usec - ping.timeC[0].Timeval.tv_usec)/1000.0;
     statsSave(time);
+    printf("response type: %d, code: %d, checksum: %d, id: %d, seq: %d\n",\
+    ping.r_pkt.hdr.type,\
+    ping.r_pkt.hdr.code,\
+    ping.r_pkt.hdr.checksum,\
+    ping.r_pkt.hdr.un.echo.id,\
+    ping.r_pkt.hdr.un.echo.sequence);
     if (rcv == -1){
         perror("recvfrom");
         ping.rcev_count--;
     }
     else if (ping.r_pkt.hdr.type == ICMP_ECHOREPLY || ping.r_pkt.hdr.code == 0){
             printf("%d bytes from %s: icmp_seq=%d ttl=%d time=%.3f ms\n",\
-            rcv, ping.ipStr, ping.s_pkt.hdr.un.echo.sequence, ping.ttl, time);
+            rcv, ping.ipStr, ping.s_pkt.hdr.un.echo.sequence+1, ping.ttl, time);
     }
     else if (ping.r_pkt.hdr.type == ICMP_DEST_UNREACH){
         printf("Destination unreachable\n");
@@ -116,9 +126,9 @@ void    pingPong(){
     else if (ping.r_pkt.hdr.type == ICMP_TIME_EXCEEDED){
         printf("Time to Live exceeded in Transit\n");
     }
-    else {
-        printf("Request timeout for icmp_seq %d\n", ping.s_pkt.hdr.un.echo.sequence);
-    }
+    // else {
+    //     printf("Request timeout for icmp_seq %d\n", ping.s_pkt.hdr.un.echo.sequence);
+    // }
     ping.sent_count++;
     ping.rcev_count++;
     ping.pong = 1;
@@ -185,8 +195,9 @@ int main(int ac, char **av){
         usage(av[0]);
     }
     // get address info
-    if (getaddrinfo(av[1], NULL, NULL, &ping.addrInfo) != 0){
-        printf("getaddrinfo error \n");
+    if (getaddrinfo(av[i], NULL, NULL, &ping.addrInfo) != 0){
+        printf("<destination> error \n");
+        perror("getaddrinfo ");
         exit(1);
     }
     else {
@@ -218,9 +229,9 @@ int main(int ac, char **av){
             signal(SIGALRM,pingPong);
             alarm(1);
             ping.pong = 0;
-            if (ping.count[1]){
+            if (ping.count[0]){
                 if (ping.count[1] == 0){
-                    break;
+                    halt();
                 }
                 ping.count[1]--;
             }
