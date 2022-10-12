@@ -18,37 +18,39 @@
 
 #include <sys/time.h>
 
+#include <errno.h>
+
 #define PING_PKT_S 64
 
 
 
-//from ip_icmp.h
+// //from ip_icmp.h
 
-#define ICMP_ECHOREPLY		0	/* Echo Reply			*/
-#define ICMP_DEST_UNREACH	3	/* Destination Unreachable	*/
-#define ICMP_ECHO                8        /* Echo Request     */
-#define ICMP_TIME_EXCEEDED	11	/* Time Exceeded		*/
+// #define ICMP_ECHOREPLY		0	/* Echo Reply			*/
+// #define ICMP_DEST_UNREACH	3	/* Destination Unreachable	*/
+// #define ICMP_ECHO                8        /* Echo Request     */
+// #define ICMP_TIME_EXCEEDED	11	/* Time Exceeded		*/
 
-struct icmphdr
-{
-  u_int8_t type;                /* message type */
-  u_int8_t code;                /* type sub-code */
-  u_int16_t checksum;
-  union
-  {
-    struct
-    {
-      u_int16_t        id;
-      u_int16_t        sequence;
-    } echo;                        /* echo datagram */
-    u_int32_t        gateway;        /* gateway address */
-    struct
-    {
-      u_int16_t        unused;
-      u_int16_t        mtu;
-    } frag;                        /* path mtu discovery */
-  } un;
-};
+// struct icmphdr
+// {
+//   u_int8_t type;                /* message type */
+//   u_int8_t code;                /* type sub-code */
+//   u_int16_t checksum;
+//   union
+//   {
+//     struct
+//     {
+//       u_int16_t        id;
+//       u_int16_t        sequence;
+//     } echo;                        /* echo datagram */
+//     u_int32_t        gateway;        /* gateway address */
+//     struct
+//     {
+//       u_int16_t        unused;
+//       u_int16_t        mtu;
+//     } frag;                        /* path mtu discovery */
+//   } un;
+// };
 
 /////////////////////////////////////////////////////////
 
@@ -89,6 +91,8 @@ typedef struct          s_ping{
     int                 count[2]; // 0 there is a count flag, 1 is the count value 
     char                ipStr[INET_ADDRSTRLEN];
     double              stats[3]; // 0 min, 1 max, 2 total to calculate avg
+    struct ping_pkt     s_pkt;
+    struct ping_pkt     r_pkt;
     struct addrinfo     addrInfoStruct; // struct addrinfo {
                                         //    int              ai_flags;
                                         //    int              ai_family;
@@ -100,8 +104,6 @@ typedef struct          s_ping{
                                         //    struct addrinfo *ai_next;
                                         // };
     struct addrinfo     *addrInfo; 
-    struct ping_pkt     s_pkt;
-    struct ping_pkt     r_pkt;
     struct time_s       timeC[2];
     struct timeval      rcvTimeval; // struct timeval {
                                     //    time_t  tv_sec;
