@@ -20,6 +20,9 @@
 
 #include <errno.h>
 
+#include <netinet/ip_icmp.h>
+#include <string.h>
+
 #define PING_PKT_S 64
 
 
@@ -92,6 +95,7 @@ typedef struct          s_ping{
     char                ipStr[INET_ADDRSTRLEN];
     double              stats[3]; // 0 min, 1 max, 2 total to calculate avg
     struct ping_pkt     s_pkt;
+    long                spacer;
     struct ping_pkt     r_pkt;
     struct addrinfo     addrInfoStruct; // struct addrinfo {
                                         //    int              ai_flags;

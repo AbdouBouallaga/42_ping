@@ -48,8 +48,8 @@ void init_ping(){ // init ping struct
 
 void    halt(){ // print stats and exit.
     printf("\n--- %s ping statistics ---\n",ping.ipStr);
-    printf("%d packets transmitted, %d packets received, %f%% packet loss.\n",\
-    ping.sent_count, ping.rcev_count, (double)(ping.sent_count - ping.rcev_count) / ping.sent_count * 100);
+    printf("%d packets transmitted, %d packets received, %d%% packet loss.\n",\
+    ping.sent_count, ping.rcev_count, (int)(ping.sent_count - ping.rcev_count) / ping.sent_count * 100);
     if (ping.stats[0] < 100){
         printf("round-trip min/avg/max = %.3f / %.3f / %.3f ms\n",\
         ping.stats[0],\
@@ -57,6 +57,7 @@ void    halt(){ // print stats and exit.
         ping.stats[1]\
         );
     }
+    freeaddrinfo(ping.addrInfo);
     exit(1);
 }
 
@@ -74,7 +75,6 @@ void    pingPong(){
     // clean icmp packet
     ft_bzero(&ping.s_pkt, sizeof(ping.s_pkt));
     ping.s_pkt.hdr.un.echo.sequence = save_seq;
-    ft_bzero(&ping.r_pkt, sizeof(ping.r_pkt));
     //// fillup icmp packet
     // set packet type to ICMP_ECHO
     ping.s_pkt.hdr.type = ICMP_ECHO;
@@ -91,6 +91,12 @@ void    pingPong(){
     // get send time
     gettimeofday(&ping.timeC[0].Timeval, NULL);
     // send the packet
+    printf("sent type: %x, code: %x, checksum: %x, id: %d, seq: %d\n",\
+    ping.s_pkt.hdr.type,\
+    ping.s_pkt.hdr.code,\
+    ping.s_pkt.hdr.checksum,\
+    ping.s_pkt.hdr.un.echo.id,\
+    ping.s_pkt.hdr.un.echo.sequence);
     int snt = sendto(ping.sockfd, &ping.s_pkt, sizeof(ping.s_pkt), 0, ping.addrInfo->ai_addr, sizeof(*ping.addrInfo->ai_addr));
     // perror("sendto");
     if (snt == -1){
@@ -98,12 +104,13 @@ void    pingPong(){
         ping.sent_count--;
     }
     ping.s_pkt.hdr.un.echo.sequence++;
-    int rcv = recvfrom(ping.sockfd, &ping.r_pkt, sizeof(ping.r_pkt), 0, 0, 0);
+    ft_bzero(&ping.r_pkt, sizeof(ping.s_pkt));
+    int rcv = recvfrom(ping.sockfd, &ping.r_pkt, sizeof(ping.r_pkt), 0, ping.addrInfo->ai_addr, sizeof(*ping.addrInfo->ai_addr));
     // perror("recvfrom");
     gettimeofday(&ping.timeC[1].Timeval, NULL);
     double time = (ping.timeC[1].Timeval.tv_usec - ping.timeC[0].Timeval.tv_usec)/1000.0;
     statsSave(time);
-    printf("response type: %d, code: %d, checksum: %d, id: %d, seq: %d\n",\
+    printf("response type: %d, code: %d, checksum: %x, id: %d, seq: %d\n",\
     ping.r_pkt.hdr.type,\
     ping.r_pkt.hdr.code,\
     ping.r_pkt.hdr.checksum,\
@@ -111,6 +118,7 @@ void    pingPong(){
     ping.r_pkt.hdr.un.echo.sequence);
     if (rcv == -1){
         perror("recvfrom");
+        printf("recvfrom IP_TTL %s", strerror(errno));
         ping.rcev_count--;
     }
     else if (ping.r_pkt.hdr.type == ICMP_ECHOREPLY || ping.r_pkt.hdr.code == 0){
@@ -151,6 +159,7 @@ int ft_itsdigit(char *str){
 
 int main(int ac, char **av){
     int i;
+    int dns;
 
     // printf("uid %d\n", getuid());
     // exit(1);
@@ -192,9 +201,9 @@ int main(int ac, char **av){
         usage(av[0]);
     }
     // get address info
-    if (getaddrinfo(av[i], NULL, NULL, &ping.addrInfo) != 0){
-        printf("<destination> error \n");
-        perror("getaddrinfo ");
+    dns = getaddrinfo(av[i], NULL, NULL, &ping.addrInfo);
+    if (dns != 0){
+        printf("<destination> error : %s\n", gai_strerror(dns));
         exit(1);
     }
     else {
@@ -209,7 +218,7 @@ int main(int ac, char **av){
     }
     // set Time to live (ttl) to limit hops of the packert
     if (setsockopt(ping.sockfd, IPPROTO_IP, IP_TTL, &ping.ttl, sizeof(ping.ttl)) != 0){
-        perror("setsockopt IP_TTL");
+        printf("setsockopt IP_TTL %x", strerror(errno));
     }
     // set the timeout of the recev function
     if (setsockopt(ping.sockfd, SOL_SOCKET, SO_RCVTIMEO, &ping.rcvTimeval, sizeof(ping.rcvTimeval)) != 0){
