@@ -62,6 +62,21 @@ struct icmphdr
   } un;
 };
 
+typedef struct 
+{ 
+    uint8_t   ver_hlen;   /* Header version and length (dwords). */
+    uint8_t   service;    /* Service type. */
+    uint16_t  length;     /* Length of datagram (bytes). */
+    uint16_t  ident;      /* Unique packet identification. */
+    uint16_t  fragment;   /* Flags; Fragment offset. */
+    uint8_t   timetolive; /* Packet time to live (in network). */
+    uint8_t   protocol;   /* Upper level protocol (UDP, TCP). */
+    uint16_t  checksum;   /* IP header checksum. */
+    uint32_t  src_addr;   /* Source IP address. */
+    uint32_t  dest_addr;  /* Destination IP address. */
+
+} NetIpHdr;
+
 // struct msghdr {
 //     void         *msg_name;       /* optional address */
 //     socklen_t     msg_namelen;    /* size of address */
@@ -72,12 +87,6 @@ struct icmphdr
 //     int           msg_flags;      /* flags on received message */
 // };
 
-// struct sockaddr_in {
-//     short            sin_family;   // e.g. AF_INET
-//     unsigned short   sin_port;     // e.g. htons(3490)
-//     struct in_addr   sin_addr;     // see struct in_addr, below
-//     char             sin_zero[8];  // zero this if you want to
-// };
 /////////////////////////////////////////////////////////
 
 struct ping_pkt {
@@ -94,7 +103,24 @@ struct ping_pkt {
 //                struct sockaddr *ai_addr;
 //                char            *ai_canonname;
 //                struct addrinfo *ai_next;
-//            };
+// };
+
+// struct sockaddr
+// {
+//     unsigned short integer sa_family;     /* address family */
+//     char sa_data[14];      /*  up to 14 bytes of direct address */
+// };
+
+// struct sockaddr_in {
+//     short            sin_family;   // e.g. AF_INET
+//     unsigned short   sin_port;     // e.g. htons(3490)
+//     struct in_addr   sin_addr;     // see struct in_addr, below
+//     char             sin_zero[8];  // zero this if you want to
+// };
+
+// struct in_addr {
+//     unsigned long s_addr;  // load with inet_aton()
+// };
 
 struct          time_s{
   struct timeval      Timeval; // struct timeval {
@@ -116,10 +142,10 @@ typedef struct          s_ping{
     int                 ttl;
     size_t              msg_size;
     size_t              sizeof_pkt;
-    int                 count[2]; // 0 there is a count flag, 1 is the count value 
+    int                 count[2]; // 0 there is a count flag -c, 1 is the count value 
     char                ipStr[INET_ADDRSTRLEN];
     double              stats[3]; // 0 min, 1 max, 2 total to calculate avg
-    struct ping_pkt     pkt;
+    struct ping_pkt     s_pkt;
     struct ping_pkt     *r_pkt;
     struct msghdr       r_msg;
     struct addrinfo     addrInfoStruct; // struct addrinfo {
