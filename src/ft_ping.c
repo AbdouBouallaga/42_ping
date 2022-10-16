@@ -65,9 +65,12 @@ void init_ping(){ // init ping struct
 }
 
 void    halt(){ // print stats and exit.
+    gettimeofday(&ping.GlobaltimeCount[1].Timeval, NULL);
+    double time = (ping.GlobaltimeCount[1].Timeval.tv_usec - ping.GlobaltimeCount[0].Timeval.tv_usec)/1000.0+\
+    (ping.GlobaltimeCount[1].Timeval.tv_sec - ping.GlobaltimeCount[0].Timeval.tv_sec)*1000.0;
     printf("\n--- %s ping statistics ---\n",ping.host_av_addr);
-    printf("%d packets transmitted, %d packets received, %d%% packet loss.\n",\
-    ping.sent_count, ping.rcev_count, (int)(ping.sent_count - ping.rcev_count) / ping.sent_count * 100);
+    printf("%d packets transmitted, %d packets received, %d%% packet loss, time %.0fms\n",\
+    ping.sent_count, ping.rcev_count, (int)(ping.sent_count - ping.rcev_count) / ping.sent_count * 100, time);
     if (ping.rtt_stats[0] < 100){
         printf("round-trip min/avg/max = %.3f / %.3f / %.3f ms\n",\
         ping.rtt_stats[0],\
@@ -123,7 +126,7 @@ void    pingPong(){
     ft_bzero(&ping.r_msg, sizeof(ping.r_msg));
     
     // get send time
-    gettimeofday(&ping.timeC[0].Timeval, NULL);
+    gettimeofday(&ping.timeCount[0].Timeval, NULL);
     // send the packet
     int snt = sendto(ping.sockfd, &ping.s_pkt, (size_t)ping.sizeof_pkt, 0, ping.addrInfo->ai_addr, sizeof(*ping.addrInfo->ai_addr));
     if (snt == -1 && ping.verbose){
@@ -162,8 +165,8 @@ void    pingPong(){
             }
             r_ip = (uint8_t *)&r_ipHdr->src_addr;
 
-            gettimeofday(&ping.timeC[1].Timeval, NULL);
-            double time = (ping.timeC[1].Timeval.tv_usec - ping.timeC[0].Timeval.tv_usec)/1000.0;
+            gettimeofday(&ping.timeCount[1].Timeval, NULL);
+            double time = (ping.timeCount[1].Timeval.tv_usec - ping.timeCount[0].Timeval.tv_usec)/1000.0+(ping.timeCount[1].Timeval.tv_sec - ping.timeCount[0].Timeval.tv_sec)*1000.0;
             statsSave(time);
             if (ping.r_pkt->hdr.type == ICMP_ECHOREPLY){
                 if (ping.r_pkt->hdr.un.echo.id != ping.s_pkt.hdr.un.echo.id){
@@ -323,6 +326,7 @@ int main(int ac, char **av){
     }
     ping.host_av_addr = av[i]; // save the host name memory address
     printf("PING %s (%s) %d(%d) bytes of data.\n", ping.host_av_addr, ping.ipStr, (int)ping.msg_size,(int)ping.sizeof_pkt);
+    gettimeofday(&ping.GlobaltimeCount[0].Timeval, NULL);
     signal(SIGINT, halt); // ctrl+c signal
     if (ping.flood_flag)
         goto flood;

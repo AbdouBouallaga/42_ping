@@ -31,36 +31,32 @@
 
 // //from ip_icmp.h
 
-// #define ICMP_ECHOREPLY		0	/* Echo Reply			*/
-// #define ICMP_DEST_UNREACH	3	/* Destination Unreachable	*/
-// #define ICMP_ECHO                8        /* Echo Request     */
-// #define ICMP_TIME_EXCEEDED	11	/* Time Exceeded		*/
-
+#define ICMP_ECHO                8        /* Echo Request     */
 #define ICMP_ECHOREPLY          0               /* echo reply */
 #define ICMP_UNREACH            3               /* dest unreachable, codes: */
 #define ICMP_TIMXCEED           11              /* time exceeded, code: */
 
 
-struct icmphdr
-{
-  u_int8_t type;                /* message type */
-  u_int8_t code;                /* type sub-code */
-  u_int16_t checksum;
-  union
-  {
-    struct
-    {
-      u_int16_t        id;
-      u_int16_t        sequence;
-    } echo;                        /* echo datagram */
-    u_int32_t        gateway;        /* gateway address */
-    struct
-    {
-      u_int16_t        unused;
-      u_int16_t        mtu;
-    } frag;                        /* path mtu discovery */
-  } un;
-};
+// struct icmphdr
+// {
+//   u_int8_t type;                /* message type */
+//   u_int8_t code;                /* type sub-code */
+//   u_int16_t checksum;
+//   union
+//   {
+//     struct
+//     {
+//       u_int16_t        id;
+//       u_int16_t        sequence;
+//     } echo;                        /* echo datagram */
+//     u_int32_t        gateway;        /* gateway address */
+//     struct
+//     {
+//       u_int16_t        unused;
+//       u_int16_t        mtu;
+//     } frag;                        /* path mtu discovery */
+//   } un;
+// };
 
 typedef struct 
 { 
@@ -89,7 +85,7 @@ typedef struct
 
 /////////////////////////////////////////////////////////
 
-struct ping_pkt {
+struct   {
     struct icmphdr hdr;
     char msg[PING_PKT_S-sizeof(struct icmphdr)];
 };
@@ -164,7 +160,8 @@ typedef struct          s_ping{
                                         //    struct addrinfo *ai_next;
                                         // };
     struct addrinfo     *addrInfo; 
-    struct time_s       timeC[2];
+    struct time_s       GlobaltimeCount[2]; // 0 start , 1 stop
+    struct time_s       timeCount[2]; // 0 sent , 1 received
     struct timeval      rcvTimeval; // struct timeval {
                                     //    time_t  tv_sec;
                                     //    suseconds_t  tv_usec;
