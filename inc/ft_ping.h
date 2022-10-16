@@ -139,12 +139,17 @@ typedef struct          s_ping{
     int                 verbose;
     int                 sent_count;
     int                 rcev_count;
+    int                 interval_flag;
+    int                 flood_flag;
+    int                 count_flag[2]; // 0 there is a count flag -c, 1 is the count value 
     int                 ttl;
     size_t              msg_size;
     size_t              sizeof_pkt;
-    int                 count[2]; // 0 there is a count flag -c, 1 is the count value 
+    char                *host_av_addr;
     char                ipStr[INET_ADDRSTRLEN];
-    double              stats[3]; // 0 min, 1 max, 2 total to calculate avg
+    u_int16_t           s_seq;
+    u_int16_t           pid;
+    double              rtt_stats[3]; // 0 min, 1 max, 2 total to calculate avg
     struct ping_pkt     s_pkt;
     struct ping_pkt     *r_pkt;
     struct msghdr       r_msg;

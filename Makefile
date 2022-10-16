@@ -1,8 +1,8 @@
 NAME = ft_ping
 SRC = ./src/ft_ping.c
 OBJ	= $(SRC:.c=.o)
-# CFLAGS	=-Wall -Wextra -Werror
-CFLAGS	=
+CFLAGS	=-Wall -Wextra -Werror
+# CFLAGS	=
 MAL_HEADER = ./inc
 FT_LIB = ./libft/libft.a
 
