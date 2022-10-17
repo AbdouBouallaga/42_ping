@@ -135,6 +135,7 @@ typedef struct          s_ping{
     int                 verbose;
     int                 sent_count;
     int                 rcev_count;
+    int                 errors;
     int                 interval_flag;
     int                 flood_flag;
     int                 count_flag[2]; // 0 there is a count flag -c, 1 is the count value 

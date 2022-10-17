@@ -69,9 +69,13 @@ void    halt(){ // print stats and exit.
     double time = (ping.GlobaltimeCount[1].Timeval.tv_usec - ping.GlobaltimeCount[0].Timeval.tv_usec)/1000.0+\
     (ping.GlobaltimeCount[1].Timeval.tv_sec - ping.GlobaltimeCount[0].Timeval.tv_sec)*1000.0;
     printf("\n--- %s ping statistics ---\n",ping.host_av_addr);
-    printf("%d packets transmitted, %d packets received, %d%% packet loss, time %.0fms\n",\
-    ping.sent_count, ping.rcev_count, (int)(ping.sent_count - ping.rcev_count) / ping.sent_count * 100, time);
-    if (ping.rtt_stats[0] < 100){
+    printf("%d packets transmitted, %d packets received,",\
+    ping.sent_count, ping.rcev_count);
+    if (ping.errors)
+        printf(" +%d errors,", ping.errors);
+    printf(" %d%% packet loss, time %.0fms\n",\
+    (int)(ping.sent_count - ping.rcev_count) / ping.sent_count * 100, time);
+    if (ping.rcev_count){
         printf("round-trip min/avg/max = %.3f / %.3f / %.3f ms\n",\
         ping.rtt_stats[0],\
         ping.rtt_stats[2]/ping.rcev_count,\
@@ -152,12 +156,16 @@ void    pingPong(){
         if (rcv == -1){
             if (ping.verbose)
                 printf("recvmsg : %s\n", strerror(errno));
-            printf("Request timeout for icmp_seq %d\n", ping.s_pkt.hdr.un.echo.sequence);
+            else
+                printf("recvmsg error, use -v for more information.\n");
             i = 0;
         }
         else {
             r_ipHdr = (NetIpHdr *)msgbuff;
             ping.r_pkt = (struct ping_pkt *)&msgbuff[sizeof(NetIpHdr)];
+            gettimeofday(&ping.timeCount[1].Timeval, NULL);
+            double time = (ping.timeCount[1].Timeval.tv_usec - ping.timeCount[0].Timeval.tv_usec)/1000.0+(ping.timeCount[1].Timeval.tv_sec - ping.timeCount[0].Timeval.tv_sec)*1000.0;
+            statsSave(time);
             if (ping.flood_flag){
                 if (ping.r_pkt->hdr.type == ICMP_ECHOREPLY){
                     ping.rcev_count++;
@@ -168,9 +176,7 @@ void    pingPong(){
             }
             r_ip = (uint8_t *)&r_ipHdr->src_addr;
 
-            gettimeofday(&ping.timeCount[1].Timeval, NULL);
-            double time = (ping.timeCount[1].Timeval.tv_usec - ping.timeCount[0].Timeval.tv_usec)/1000.0+(ping.timeCount[1].Timeval.tv_sec - ping.timeCount[0].Timeval.tv_sec)*1000.0;
-            statsSave(time);
+            
             if (ping.r_pkt->hdr.type == ICMP_ECHOREPLY){
                 if (ping.r_pkt->hdr.un.echo.id != ping.s_pkt.hdr.un.echo.id){
                     goto end;
@@ -200,18 +206,11 @@ void    pingPong(){
             else if (ping.r_pkt->hdr.type == ICMP_TIMXCEED){// type 11 have 8 bytes then contain ip and icmp header
                 r_ipHdr = (NetIpHdr *)((char*)msgbuff+sizeof(NetIpHdr)+8); 
                 ping.r_pkt = (struct ping_pkt *)&msgbuff[(sizeof(NetIpHdr)*2+8)];
-                r_ip = (uint8_t *)&r_ipHdr->src_addr;
-                if (ping.r_pkt->hdr.un.echo.id != ping.s_pkt.hdr.un.echo.id){
+                // r_ip = (uint8_t *)&r_ipHdr->src_addr;
+                if (ping.r_pkt->hdr.un.echo.id != ping.s_pkt.hdr.un.echo.id)
                     goto end;
-                }
-                if (ping.verbose)
-                    printf("response type: %d, code: %d, checksum: %x, id: %d, seq: %d\n",\
-                    ping.r_pkt->hdr.type,\
-                    ping.r_pkt->hdr.code,\
-                    ping.r_pkt->hdr.checksum,\
-                    ping.r_pkt->hdr.un.echo.id,\
-                    ping.r_pkt->hdr.un.echo.sequence);
-                printf("from %d.%d.%d.%d: Time to Live exceeded\n",r_ip[0],r_ip[1],r_ip[2],r_ip[3]);
+                printf("from %d.%d.%d.%d icmp_seq=%d Time to Live exceeded\n",r_ip[0],r_ip[1],r_ip[2],r_ip[3], ping.r_pkt->hdr.un.echo.sequence);
+                ping.errors++;
                 i = 0;
             }
         end:
@@ -307,7 +306,7 @@ int main(int ac, char **av){
     // get address info
     dns = getaddrinfo(av[i], NULL, NULL, &ping.addrInfo);
     if (dns != 0){
-        printf("<destination> error : %s\n", gai_strerror(dns));
+        printf("ping: %s: <destination> error : %s\n", av[i], gai_strerror(dns));
         exit(1);
     }
     else {
