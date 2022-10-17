@@ -3,7 +3,7 @@ SRC = ./src/ft_ping.c
 OBJ	= $(SRC:.c=.o)
 CFLAGS	=-Wall -Wextra -Werror
 # CFLAGS	=
-MAL_HEADER = ./inc
+P_HEADER = ./inc/ft_ping.h
 FT_LIB = ./libft/libft.a
 
 all: $(FT_LIB) $(NAME)
@@ -11,7 +11,7 @@ all: $(FT_LIB) $(NAME)
 $(FT_LIB): 
 	@make -C  ./libft
 
-$(NAME): $(OBJ)
+$(NAME): $(OBJ) $(P_HEADER)
 	gcc $(CFLAGS) -o $(NAME) $(OBJ) $(FT_LIB)
 
 

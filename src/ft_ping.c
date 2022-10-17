@@ -1,32 +1,6 @@
 #include "../inc/ft_ping.h"
 
-
 t_ping ping;
-
-void    hex_dump(u_char ch)
-{
-    int a = ch/16;
-    int i = -1;
-    while (++i < 2){
-        if (a < 10)
-            a = '0' + a;
-        else
-            a = 'a' + a - 10;
-        ft_putchar(a);
-        a = ch%16;
-    }
-}
-
-struct echo_request
-    {
-        char type; // Type
-        char code; // Code
-        short checksum; // Checksum
-        short id; // Identification
-        short seq; // Sequence
-        int time; // Time
-        char data[16]; // Data
-    };
 
 unsigned short checksum(void *b, int len){ // Calculating icmp CheckSum
     unsigned short *buf = b;
@@ -50,8 +24,8 @@ void init_ping(){ // init ping struct
     ping.msg_size = 56;
     ping.interval_flag = 1;
     ping.flood_flag = 0;
-    ping.count_flag[0] = 0; //flag -c enabler
-    ping.count_flag[1] = 0; //flag -c value
+    ping.count_flag.enabler = 0; //flag -c enabler
+    ping.count_flag.value = 0; //flag -c value
     ping.sent_count = 0;
     ping.rcev_count = 0;
     ping.ttl = 64;
@@ -117,7 +91,7 @@ void    prepare_s_pkt(){
 }
 
 void    pingPong(){
-    int i;
+    int loop;
     int rcv;
 
     NetIpHdr *r_ipHdr;
@@ -149,16 +123,16 @@ void    pingPong(){
     ping.r_msg.msg_iovlen = 1;
     ping.r_msg.msg_iov->iov_base = msgbuff;
     ping.r_msg.msg_iov->iov_len = sizeof(msgbuff);
-    i = 1;
+    loop = 1;
 
-    while (i){ // to ignore all indesired icmp packets
+    while (loop){ // to ignore all indesired icmp packets
         rcv = recvmsg(ping.sockfd, &ping.r_msg, 0);
         if (rcv == -1){
             if (ping.verbose)
                 printf("recvmsg : %s\n", strerror(errno));
             else
                 printf("recvmsg error, use -v for more information.\n");
-            i = 0;
+            loop = 0;
         }
         else {
             r_ipHdr = (NetIpHdr *)msgbuff;
@@ -169,21 +143,17 @@ void    pingPong(){
             if (ping.flood_flag){
                 if (ping.r_pkt->hdr.type == ICMP_ECHOREPLY){
                     ping.rcev_count++;
-                    i = 0;
+                    loop = 0;
                     ft_putchar('\b');
                 }
                 goto end;   
             }
             r_ip = (uint8_t *)&r_ipHdr->src_addr;
 
-            
             if (ping.r_pkt->hdr.type == ICMP_ECHOREPLY){
                 if (ping.r_pkt->hdr.un.echo.id != ping.s_pkt.hdr.un.echo.id){
                     goto end;
                 }
-                // if ((unsigned long)r_ipHdr->src_addr != ((struct sockaddr_in *)ping.addrInfo->ai_addr)->sin_addr.s_addr){
-                //     goto end;
-                // }
                 printf("%d bytes from %d.%d.%d.%d: icmp_seq=%d ttl=%d time=%.3f ms\n",\
                 rcv-(int)sizeof(NetIpHdr),\
                 r_ip[0],r_ip[1],r_ip[2],r_ip[3],\
@@ -192,7 +162,7 @@ void    pingPong(){
                 time\
                 );
                 ping.rcev_count++;
-                i = 0;
+                loop = 0;
             }
             else if (ping.r_pkt->hdr.type == ICMP_UNREACH){
                 r_ipHdr = (NetIpHdr *)((char*)msgbuff+sizeof(NetIpHdr)+8); 
@@ -201,24 +171,22 @@ void    pingPong(){
                     goto end;
                 }
                 printf("from %d.%d.%d.%d: Destination unreachable\n",r_ip[0],r_ip[1],r_ip[2],r_ip[3]);
-                i = 0;
+                loop = 0;
             }
             else if (ping.r_pkt->hdr.type == ICMP_TIMXCEED){// type 11 have 8 bytes then contain ip and icmp header
                 r_ipHdr = (NetIpHdr *)((char*)msgbuff+sizeof(NetIpHdr)+8); 
                 ping.r_pkt = (struct ping_pkt *)&msgbuff[(sizeof(NetIpHdr)*2+8)];
-                // r_ip = (uint8_t *)&r_ipHdr->src_addr;
                 if (ping.r_pkt->hdr.un.echo.id != ping.s_pkt.hdr.un.echo.id)
                     goto end;
                 printf("from %d.%d.%d.%d icmp_seq=%d Time to Live exceeded\n",r_ip[0],r_ip[1],r_ip[2],r_ip[3], ping.r_pkt->hdr.un.echo.sequence);
                 ping.errors++;
-                i = 0;
+                loop = 0;
             }
         end:
         continue;
         }
     }
     out:
-    
     ping.pong = 1;
 }
 
@@ -259,8 +227,7 @@ int main(int ac, char **av){
 	}
     init_ping();
     i = 1;
-    while(av[i][0] == '-' && i < ac){
-        // printf("av[%d] = %s\n", i, av[i]);
+    while(av[i] && av[i][0] == '-' && i < ac){
         if (av[i][1] == 'v'){
             ping.verbose = 1;
         }
@@ -269,8 +236,12 @@ int main(int ac, char **av){
             i++;
         }
         else if (av[i][1] == 'c' && ft_itsdigit(av[i+1])){
-            ping.count_flag[0] = 1;
-            ping.count_flag[1] = ft_atoi(av[i+1]);
+            ping.count_flag.enabler = 1;
+            ping.count_flag.value = ft_atoll(av[i+1]) - 1;
+            if (ping.count_flag.value < 0 || ping.count_flag.value > LLONG_MAX){
+                printf("ping: invalid argument: '%lld': out of range: 1 <= value <= %lld\n",ping.count_flag.value + 1, LLONG_MAX);
+                exit(1);
+            }
             i++;
         }
         else if (av[i][1] == 's' && ft_itsdigit(av[i+1])){
@@ -296,7 +267,6 @@ int main(int ac, char **av){
             usage(av[0]);
         }
         i++;
-        // printf("i = %d\n", i);
     }
     if (av[i] == NULL){
         usage(av[0]);
@@ -339,11 +309,11 @@ int main(int ac, char **av){
             signal(SIGALRM,pingPong); // alarm signal to send ping
             alarm(ping.interval_flag);
             ping.pong = 0;
-            if (ping.count_flag[0]){
-                if (ping.count_flag[1] == 0){
+            if (ping.count_flag.enabler){
+                if (ping.count_flag.value == 0){
                     halt();
                 }
-                ping.count_flag[1]--;
+                ping.count_flag.value--;
             }
         }
     }

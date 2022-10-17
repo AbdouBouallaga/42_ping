@@ -3,6 +3,8 @@
 
 #include "../libft/libft.h"
 
+#include <limits.h>
+
 #include <sys/socket.h>
 
 #include <stdio.h>
@@ -129,6 +131,10 @@ struct          time_s{
                                     // };
 };
 
+struct                  s_count_flag{
+  short                 enabler;
+  long long             value;
+};
 typedef struct          s_ping{
     int                 pong; // ping.pong comtroled by signal
     int                 sockfd;
@@ -138,7 +144,7 @@ typedef struct          s_ping{
     int                 errors;
     int                 interval_flag;
     int                 flood_flag;
-    int                 count_flag[2]; // 0 there is a count flag -c, 1 is the count value 
+    struct s_count_flag count_flag; // 0 there is a count flag -c, 1 is the count value 
     int                 ttl;
     size_t              msg_size;
     size_t              sizeof_pkt;
