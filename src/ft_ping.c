@@ -129,9 +129,11 @@ void    pingPong(){
     gettimeofday(&ping.timeCount[0].Timeval, NULL);
     // send the packet
     int snt = sendto(ping.sockfd, &ping.s_pkt, (size_t)ping.sizeof_pkt, 0, ping.addrInfo->ai_addr, sizeof(*ping.addrInfo->ai_addr));
-    if (snt == -1 && ping.verbose){
-        printf("sendto : %s\n", strerror(errno));
+    if (snt == -1){
         ping.sent_count--;
+        if (ping.verbose)
+            printf("sendto : %s\n", strerror(errno));
+        goto out;
     }
     if (ping.flood_flag)
         ft_putchar('.');
@@ -215,6 +217,7 @@ void    pingPong(){
         continue;
         }
     }
+    out:
     ping.sent_count++;
     ping.pong = 1;
 }

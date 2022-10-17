@@ -37,26 +37,26 @@
 #define ICMP_TIMXCEED           11              /* time exceeded, code: */
 
 
-// struct icmphdr
-// {
-//   u_int8_t type;                /* message type */
-//   u_int8_t code;                /* type sub-code */
-//   u_int16_t checksum;
-//   union
-//   {
-//     struct
-//     {
-//       u_int16_t        id;
-//       u_int16_t        sequence;
-//     } echo;                        /* echo datagram */
-//     u_int32_t        gateway;        /* gateway address */
-//     struct
-//     {
-//       u_int16_t        unused;
-//       u_int16_t        mtu;
-//     } frag;                        /* path mtu discovery */
-//   } un;
-// };
+struct s_icmphdr
+{
+  u_int8_t type;                /* message type */
+  u_int8_t code;                /* type sub-code */
+  u_int16_t checksum;
+  union
+  {
+    struct
+    {
+      u_int16_t        id;
+      u_int16_t        sequence;
+    } echo;                        /* echo datagram */
+    u_int32_t        gateway;        /* gateway address */
+    struct
+    {
+      u_int16_t        unused;
+      u_int16_t        mtu;
+    } frag;                        /* path mtu discovery */
+  } un;
+};
 
 typedef struct 
 { 
@@ -85,9 +85,9 @@ typedef struct
 
 /////////////////////////////////////////////////////////
 
-struct   {
-    struct icmphdr hdr;
-    char msg[PING_PKT_S-sizeof(struct icmphdr)];
+struct   ping_pkt{
+    struct s_icmphdr hdr;
+    char msg[PING_PKT_S-sizeof(struct s_icmphdr)];
 };
 
 // struct addrinfo {
