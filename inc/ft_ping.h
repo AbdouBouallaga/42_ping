@@ -37,6 +37,7 @@
 #define ICMP_ECHOREPLY          0               /* echo reply */
 #define ICMP_UNREACH            3               /* dest unreachable, codes: */
 #define ICMP_TIMXCEED           11              /* time exceeded, code: */
+#define FQDN_SIZE 256
 
 
 struct s_icmphdr
@@ -150,6 +151,7 @@ typedef struct          s_ping{
     size_t              sizeof_pkt;
     char                *host_av_addr;
     char                ipStr[INET_ADDRSTRLEN];
+    char                fqdn[FQDN_SIZE];
     u_int16_t           s_seq;
     u_int16_t           pid;
     double              rtt_stats[3]; // 0 min, 1 max, 2 total to calculate avg

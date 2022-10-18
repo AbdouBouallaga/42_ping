@@ -19,6 +19,7 @@ unsigned short checksum(void *b, int len){ // Calculating icmp CheckSum
 // 
 
 void init_ping(){ // init ping struct
+    ft_bzero(&ping, sizeof(ping));
     ping.pong = 1;
     ping.verbose = 0;
     ping.msg_size = 56;
@@ -154,8 +155,9 @@ void    pingPong(){
                 if (ping.r_pkt->hdr.un.echo.id != ping.s_pkt.hdr.un.echo.id){
                     goto end;
                 }
-                printf("%d bytes from %d.%d.%d.%d: icmp_seq=%d ttl=%d time=%.3f ms\n",\
+                printf("%d bytes from %s (%d.%d.%d.%d): icmp_seq=%d ttl=%d time=%.3f ms\n",\
                 rcv-(int)sizeof(NetIpHdr),\
+                ping.fqdn,\
                 r_ip[0],r_ip[1],r_ip[2],r_ip[3],\
                 ping.r_pkt->hdr.un.echo.sequence,\
                 r_ipHdr->timetolive,\
@@ -292,12 +294,19 @@ int main(int ac, char **av){
     // set Time to live (ttl) to limit hops of the packert
     if (setsockopt(ping.sockfd, IPPROTO_IP, IP_TTL, &ping.ttl, sizeof(ping.ttl)) != 0){
         printf("setsockopt IP_TTL %s\n", strerror(errno));
+        exit(1);
     }
     // set socket receive timeout
     if (setsockopt(ping.sockfd, SOL_SOCKET, SO_RCVTIMEO, &ping.rcvTimeval, sizeof(ping.rcvTimeval)) != 0){
         printf("setsockopt SO_RCVTIMEO %s\n", strerror(errno));
+        exit(1);
     }
     ping.host_av_addr = av[i]; // save the host name memory address
+    int err=getnameinfo((struct sockaddr*)ping.addrInfo->ai_addr,sizeof(ping.addrInfo->ai_addr),ping.fqdn,sizeof(ping.fqdn),0,0,0);
+    if (err!=0) {
+        printf("Failed to get FQDN. error: %s",strerror(err));
+        exit(1);
+    }
     printf("PING %s (%s) %d(%d) bytes of data.\n", ping.host_av_addr, ping.ipStr, (int)ping.msg_size,(int)ping.sizeof_pkt);
     gettimeofday(&ping.GlobaltimeCount[0].Timeval, NULL);
     signal(SIGINT, halt); // ctrl+c signal
