@@ -302,11 +302,13 @@ int main(int ac, char **av){
         exit(1);
     }
     ping.host_av_addr = av[i]; // save the host name memory address
-    int err=getnameinfo((struct sockaddr*)ping.addrInfo->ai_addr,sizeof(ping.addrInfo->ai_addr),ping.fqdn,sizeof(ping.fqdn),0,0,0);
+    ////////// BONUS //////////
+    int err = getnameinfo(ping.addrInfo->ai_addr,sizeof(struct sockaddr),ping.fqdn,sizeof(ping.fqdn),0,0,0);
     if (err!=0) {
-        printf("Failed to get FQDN. error: %s",strerror(err));
+        printf("Failed to get FQDN. error: %s\n",gai_strerror(err));
         exit(1);
     }
+    ///////////////////////////
     printf("PING %s (%s) %d(%d) bytes of data.\n", ping.host_av_addr, ping.ipStr, (int)ping.msg_size,(int)ping.sizeof_pkt);
     gettimeofday(&ping.GlobaltimeCount[0].Timeval, NULL);
     signal(SIGINT, halt); // ctrl+c signal
